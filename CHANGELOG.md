@@ -13,6 +13,10 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added (docs)
 - Skill, project note, user guide §3 / §9 and READMEs describe standby: token cost, no shared context with your session, concurrent edits in the same working tree, how to turn it off.
 
+### Changed
+- `agentbus status` shows a `last_seen` column: `online` / `state` only reflect a live control connection, so an agent that talks through one-shot CLI calls looked permanently offline.
+- `task create --max-turns` says so when the executor is a relayer (a person at the keyboard): `max_turns` counts bot messages only, so such a task is bounded by its deadline alone. READMEs and the user guide document this, that the A2A endpoint exists for hosted (bot) agents only, and that a person reading a room joins it.
+
 First public release candidate. Everything below was built in the M0–M4 milestones of [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md).
 
 ### Bus (`@agentbus/core`, `@agentbus/protocol`)

@@ -26,7 +26,7 @@ Two coding agents working on the same product usually cannot reach each other. T
 - File transfer through content-addressed blobs with quotas.
 - Exchange guard: a room pauses after too many consecutive bot messages until a person speaks.
 - Web console (`/console/`, Chinese and English), Prometheus `/metrics`, JSONL audit export.
-- A2A 1.0 endpoint per agent (`SendMessage` / `GetTask` / `CancelTask`, Agent Cards) for external agents.
+- A2A 1.0 endpoint per hosted (bot) agent (`SendMessage` / `GetTask` / `CancelTask`, Agent Cards) for external agents; agents with a person at the keyboard are not exposed, since nobody could answer an external caller promptly.
 - Multi-machine: one bus, agents anywhere that can reach it, one-time invite codes, a token on every connection.
 
 ## Requirements
@@ -160,7 +160,7 @@ The bus's `agentbus.yaml` needs `bind: 0.0.0.0` (and optionally `public_host` fo
 
 ## Tasks, rooms, files
 
-- **Tasks**: `agentbus task create --to backend "implement /users" [--desc …] [--deadline 3600] [--max-turns 10]`. The executor reports `agentbus task update <id> --state working|input-required|completed|failed [--note …]`; both sides `agentbus task list [--all]`. The bus rejects illegal transitions, marks a task `failed(budget)` when it runs out of turns or time, and forwards `input-required` to a person when the dispatcher is a bot. Every message of a task carries its id; task threads are exempt from the exchange guard.
+- **Tasks**: `agentbus task create --to backend "implement /users" [--desc …] [--deadline 3600] [--max-turns 10]`. The executor reports `agentbus task update <id> --state working|input-required|completed|failed [--note …]`; both sides `agentbus task list [--all]`. The bus rejects illegal transitions, marks a task `failed(budget)` when it runs out of turns or time, and forwards `input-required` to a person when the dispatcher is a bot. `max_turns` counts bot messages in the thread only: an executor joined with `agentbus join` (authority `relayer`, a person at the keyboard) is bounded by the deadline alone, and `task create --max-turns` says so. Every message of a task carries its id; task threads are exempt from the exchange guard.
 - **Rooms**: `agentbus join-room design`, `agentbus send --room design "…"`, `agentbus history design`. A room pauses after `guard.cap` consecutive bot messages until a person speaks (or resumes it in the console).
 - **Files**: the MCP tools `put_file(path)` → `send(..., blobs: [{id, name}])` → `list_files(room)` → `get_file(id, name)`; files land in the recipient's `cwd/.agentbus/inbox/<id>/<name>`. Blobs are content-addressed with per-blob and total quotas.
 - **Humans**: `agentbus chat --to backend`, `agentbus chat <room>`, `agentbus tail <room>`, `agentbus status`, `agentbus tasks --all`.

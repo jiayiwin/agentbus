@@ -916,7 +916,7 @@ common(program.command('status').description('agents and rooms')).action(async (
   const a = await c.request<{ agents: AgentInfo[] }>({ type: 'agents' })
   process.stdout.write(
     `${encodeRecords(
-      ['name', 'backend', 'authority', 'online', 'state', 'driver', 'standby', 'inbox', 'push'],
+      ['name', 'backend', 'authority', 'online', 'state', 'driver', 'standby', 'inbox', 'push', 'last_seen'],
       a.agents.map((x) => ({
         name: x.name,
         backend: x.backend ?? '',
@@ -927,6 +927,9 @@ common(program.command('status').description('agents and rooms')).action(async (
         standby: x.standby === true,
         inbox: x.capabilities.inbox,
         push: x.capabilities.push,
+        // online/state only reflect a live control connection; a participating agent that
+        // talks through one-shot CLI calls is "offline" between calls, so show when it last spoke.
+        last_seen: x.last_seen ? new Date(x.last_seen).toISOString() : '',
       })),
     )}\n\n`,
   )

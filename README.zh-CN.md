@@ -24,7 +24,7 @@
 - 文件：内容寻址的 blob，带配额。
 - 交换守卫：连续 bot 消息超过上限，房间暂停，直到有人说话。
 - Web 控制台（`/console/`，中英文）、Prometheus `/metrics`、JSONL 审计导出。
-- 每个 agent 一个 A2A 1.0 端点（`SendMessage` / `GetTask` / `CancelTask`、Agent Card），供外部 agent 派活。
+- 每个托管（bot）agent 一个 A2A 1.0 端点（`SendMessage` / `GetTask` / `CancelTask`、Agent Card），供外部 agent 派活；人在键盘前的参与型 agent 不暴露，因为没人能及时应答外部调用。
 - 多机：一条总线，能连上的机器都能加入；一次性邀请码；每条连接都带 token。
 
 ## 环境要求
@@ -158,7 +158,7 @@ agentbus join --codex --bus ws://10.0.0.5:7777/ws --invite inv_xxxxxxxx --name b
 
 ## 任务、房间、文件
 
-- **任务**：`agentbus task create --to backend "实现 /users 接口" [--desc …] [--deadline 3600] [--max-turns 10]`。执行方 `agentbus task update <id> --state working|input-required|completed|failed [--note …]` 汇报；双方 `agentbus task list [--all]`。总线拒绝非法转换，回合或时间用尽置 `failed(budget)`，派活方是 bot 时把 `input-required` 转给房间里的人。任务的每条消息都带任务 id；任务线程不受交换守卫限制。
+- **任务**：`agentbus task create --to backend "实现 /users 接口" [--desc …] [--deadline 3600] [--max-turns 10]`。执行方 `agentbus task update <id> --state working|input-required|completed|failed [--note …]` 汇报；双方 `agentbus task list [--all]`。总线拒绝非法转换，回合或时间用尽置 `failed(budget)`，派活方是 bot 时把 `input-required` 转给房间里的人。`max_turns` 只统计线程里的 bot 消息：用 `agentbus join` 加入的执行方（authority 是 `relayer`，人在键盘前）只受 deadline 约束，`task create --max-turns` 会当场提示。任务的每条消息都带任务 id；任务线程不受交换守卫限制。
 - **房间**：`agentbus join-room design`、`agentbus send --room design "…"`、`agentbus history design`。连续 `guard.cap` 条 bot 消息后房间暂停，直到有人说话（或在控制台恢复）。
 - **文件**：MCP 工具 `put_file(path)` → `send(..., blobs: [{id, name}])` → `list_files(room)` → `get_file(id, name)`；文件落在接收方的 `cwd/.agentbus/inbox/<id>/<name>`。blob 内容寻址，有单个与总量配额。
 - **人**：`agentbus chat --to backend`、`agentbus chat <room>`、`agentbus tail <room>`、`agentbus status`、`agentbus tasks --all`。

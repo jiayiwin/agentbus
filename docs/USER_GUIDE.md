@@ -208,6 +208,8 @@ agentbus leave --claude        # 或 --codex；加 --purge 连身份一起删
 
 要"有消息就醒"，让它值班，或者把那个目录完全改成托管（第 9 节）。
 
+**"已处理"怎么判定**：agent 在某个对话里 `send` 时，总线只把它在那个对话里**已经读过**的消息标成已处理，也就是用 `inbox` / `wait` 标过"已收"的（push 推送过的也算）。它上次读过之后才到的消息不受影响，仍是未读，下次 `inbox` 或 hook 照样带出来。所以两边交叉发消息、或者任务执行中边做边汇报，对方的提问和完成通知不会被自己的回复吞掉。hook 注入是"偷看"，不算读过，这也是技能要求每轮先跑一次 `inbox` 的原因。
+
 ---
 
 ## 5. 房间：多个 agent 一起讨论
@@ -223,6 +225,8 @@ agentbus chat api-design
 > frontend 和 backend：商定 /users 接口的 JSON 字段，最多 4 个顶层字段。frontend 先提案，backend 评审一次，达成一致后各发一条以 FINAL: 开头的消息。
 
 **守卫**：两个 bot 连续来回 20 条你都没说话，房间会自动暂停，控制台标"已暂停"。你说一句，或点"恢复"，就继续。这是防止它们无休止互相客气。
+
+**人不用 join-room**：你以 owner 身份读某个房间（`agentbus history`、`tail`、控制台点开）或在里面说话时，总线会自动把你加成成员，所以 `agentbus status` 的成员列表里会出现 owner。这不影响守卫：守卫只看"有没有人说话"，不看成员表。
 
 ---
 
@@ -244,7 +248,7 @@ agentbus task create --to backend "按 FINAL 的字段实现 /users 接口" --de
 
 - 留在两人的私聊（或指定房间）里，相关消息都带 `task_id`；
 - 由执行方用 `task_update` 汇报：`working` → `completed` / `failed`，中途可以 `input-required`（需要派发方回答）；
-- 受预算约束：`deadline`（默认 1 小时）和 `max_turns`（默认线程内 30 条 bot 消息），到点总线自动置 `failed(budget)` 并关闭线程；
+- 受预算约束：`deadline`（默认 1 小时）和 `max_turns`（默认线程内 30 条 bot 消息），到点总线自动置 `failed(budget)` 并关闭线程。注意 `max_turns` **只数 bot 发的消息**：执行方是用 `agentbus join` 加入的参与型 agent（人在键盘前，authority 是 `relayer`）时它不计数，这个任务只受 deadline 约束；`task create --max-turns` 碰到这种执行方会打印一行提示；
 - 执行方报 `input-required` 而派发方是 bot 时，总线会把问题转给房间里的人（没有则私聊任何在线的人）。
 
 看板：控制台"任务"页按状态六列，点卡片看事件和产物；命令行 `agentbus tasks`（`--all` 含已关闭）；HTTP `GET /api/console/tasks[?all=1][&state=s]`（human token）。控制台里可以取消任务、在任务线程里回复。
@@ -356,7 +360,7 @@ agentbus invite [--name backend] [--host codex]
 - 暂停 / 恢复房间：控制台房间页顶部按钮，或你在房间里说一句话（人类发言自动解除暂停）。
 - 审计导出：`agentbus audit --since 1h [--room xxx]`，一行一个 JSON，含消息（带投递）、系统事件、任务与事件、driver 回合。
 - 指标：`http://127.0.0.1:7777/metrics`，Prometheus 文本：投递按路径与状态、各 agent 待收数量、push 降级、回合、任务、暂停房间、文件字节。
-- 状态：`agentbus status`（agent 表 + 房间表），`agentbus history <room>`。
+- 状态：`agentbus status`（agent 表 + 房间表），`agentbus history <room>`。agent 表里 `online` / `state` 只反映**此刻有没有一条活着的控制连接**：托管 agent 和挂着 MCP 工具的会话会显示 online；只用命令行一次性收发的参与型 agent 每条命令结束就断线，所以总是 `false` / `unknown`，看 `last_seen` 列判断它最近一次说话是什么时候。
 
 ---
 

@@ -318,6 +318,16 @@ export function registerAgentCommands(
           ...(o.maxTurns !== undefined ? { max_turns: o.maxTurns } : {}),
         })
         process.stdout.write(`created ${taskLine(r.task)}\n`)
+        if (o.maxTurns !== undefined) {
+          // max_turns counts bot messages only (tasks.ts onThreadMessage); a relayer executor
+          // (a person at the keyboard) is bounded by the deadline alone. Say so, once.
+          const { agents } = await c.request<{ agents: AgentInfo[] }>({ type: 'agents' })
+          const executor = agents.find((a) => a.name === o.to)
+          if (executor && executor.authority !== 'bot')
+            process.stdout.write(
+              `note: ${o.to} is a ${executor.authority} (a person is at its keyboard); max_turns only counts bot messages, so this task is limited by its deadline alone\n`,
+            )
+        }
         c.close()
       },
     )
